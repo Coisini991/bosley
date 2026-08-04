@@ -130,7 +130,18 @@
    pnpm dev
    ```
    博客将在 `http://localhost:4321` 可用
-   
+
+> 工作流
+
+==可选==：使用Karpathy LLM Wiki skill，整理obsidian中的内容，形成知识库md
+
+**cmd 里跑 node scripts/sync-wiki.cjs → 自动同步到 Astro 项目 + 注入字段**
+
+`node scripts/sync-wiki.cjs `脚本在`D:\blog\Firefly\scripts`目录下
+
+本地：pnpm dev
+云端：git add  +  git commit -m "描述信息" + git push → Cloudflare 自动构建部署
+
 ### 社区教程
 Cloudflare Workers 部署：[【不用服务器，无需备案，零成本搭建一个自己的个人博客】](https://www.bilibili.com/video/BV1hX9XBKEhm)
 

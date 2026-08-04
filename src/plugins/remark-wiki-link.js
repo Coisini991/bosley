@@ -10,7 +10,8 @@ import { slug } from "github-slugger";
 import matter from "gray-matter";
 import { getApiUrlList, processCoverImageSync } from "../utils/image-utils";
 
-const POSTS_DIR = fileURLToPath(new URL("../content/posts/", import.meta.url));
+const CONTENT_DIR = fileURLToPath(new URL("../content/", import.meta.url));
+const EXCLUDED_DIRS = new Set(["spec", "dynamic"]);
 const MARKDOWN_EXTENSION = /\.(?:md|mdx|markdown)$/i;
 const WIKI_LINK = /!?\[\[([^[\]\n]+)\]\]/g;
 const STANDALONE_WIKI_LINK = /^\[\[([^[\]\n]+)\]\]$/;
@@ -63,7 +64,7 @@ function createPostUrl(contentPath) {
  */
 function toContentPath(filePath) {
 	return path
-		.relative(POSTS_DIR, filePath)
+		.relative(CONTENT_DIR, filePath)
 		.replaceAll("\\", "/")
 		.replace(MARKDOWN_EXTENSION, "");
 }
@@ -111,7 +112,7 @@ function readMetaFile(filePath) {
 
 function collectPostMetas() {
 	const metas = [];
-	const stack = [POSTS_DIR];
+	const stack = [CONTENT_DIR];
 
 	while (stack.length > 0) {
 		const dir = stack.pop();
@@ -127,6 +128,10 @@ function collectPostMetas() {
 		for (const entry of entries) {
 			const fullPath = path.join(dir, entry.name);
 			if (entry.isDirectory()) {
+				// 跳过 spec/ 和 dynamic/ 目录（它们属于其他集合）
+				if (dir === CONTENT_DIR && EXCLUDED_DIRS.has(entry.name)) {
+					continue;
+				}
 				stack.push(fullPath);
 				continue;
 			}
@@ -199,7 +204,7 @@ function readPostMeta(contentPath) {
 	];
 
 	for (const candidate of candidates) {
-		const meta = readMetaFile(path.join(POSTS_DIR, candidate));
+		const meta = readMetaFile(path.join(CONTENT_DIR, candidate));
 		if (meta) {
 			return meta;
 		}

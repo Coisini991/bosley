@@ -3,7 +3,7 @@ import type { CollectionConfig } from "astro/content/config";
 import { glob } from "astro/loaders";
 import { type ZodType, z } from "astro/zod";
 
-type PostData = {
+type ContentData = {
 	title: string;
 	published: Date;
 	updated?: Date;
@@ -25,6 +25,11 @@ type PostData = {
 	prevSlug: string;
 	nextTitle: string;
 	nextSlug: string;
+	// 统一内容层扩展字段
+	kind: "post" | "wiki" | "project" | "reading";
+	featured: boolean;
+	type?: string;
+	sources?: string[];
 };
 
 type DynamicData = {
@@ -38,8 +43,11 @@ type ContentCollection<T> = CollectionConfig<
 	ReturnType<typeof glob>
 >;
 
-const postsCollection: ContentCollection<PostData> = defineCollection({
-	loader: glob({ pattern: "**/*.{md,mdx}", base: "./src/content/posts" }),
+const contentCollection: ContentCollection<ContentData> = defineCollection({
+	loader: glob({
+		pattern: ["posts/**/*.{md,mdx}", "wiki/**/*.{md,mdx}"],
+		base: "./src/content",
+	}),
 	schema: z.object({
 		title: z.string(),
 		published: z.date(),
@@ -58,6 +66,17 @@ const postsCollection: ContentCollection<PostData> = defineCollection({
 		comment: z.boolean().optional().default(true),
 		password: z.string().optional().default(""),
 		passwordHint: z.string().optional().default(""),
+
+		/* 统一内容层：类型区分 + 精选展示 */
+		kind: z
+			.enum(["post", "wiki", "project", "reading"])
+			.optional()
+			.default("post"),
+		featured: z.boolean().optional().default(false),
+
+		/* wiki 专用字段（post 不用，optional） */
+		type: z.string().optional(),
+		sources: z.array(z.string()).optional(),
 
 		/* For internal use */
 		prevTitle: z.string().default(""),
@@ -84,10 +103,10 @@ const dynamicCollection: ContentCollection<DynamicData> = defineCollection({
 
 export const collections: {
 	dynamic: typeof dynamicCollection;
-	posts: typeof postsCollection;
+	content: typeof contentCollection;
 	spec: typeof specCollection;
 } = {
 	dynamic: dynamicCollection,
-	posts: postsCollection,
+	content: contentCollection,
 	spec: specCollection,
 };

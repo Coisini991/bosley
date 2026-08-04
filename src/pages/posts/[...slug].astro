@@ -8,7 +8,7 @@ import License from "@components/misc/License.astro";
 import I18nKey from "@i18n/i18nKey";
 import { i18n } from "@i18n/translation";
 import MainGridLayout from "@layouts/MainGridLayout.astro";
-import { getRelatedPosts, getSortedPosts } from "@utils/content-utils";
+import { getAllContentEntries, getRelatedPosts } from "@utils/content-utils";
 import {
 	getFileDirFromPath,
 	getPostUrlBySlug,
@@ -31,9 +31,9 @@ import { getApiUrlList, processCoverImageSync } from "@/utils/image-utils";
 import { url } from "@/utils/url-utils";
 
 export async function getStaticPaths() {
-	const blogEntries = await getSortedPosts();
-	return blogEntries.map((entry) => {
-		// 将 id 转换为 slug（移除扩展名）以匹配路由参数
+	const allEntries = await getAllContentEntries();
+	return allEntries.map((entry) => {
+		// glob loader 优先用 frontmatter 的 slug 字段做 id，所以这里直接用 id
 		const slug = removeFileExtension(entry.id);
 		return {
 			params: { slug },

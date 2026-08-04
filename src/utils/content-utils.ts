@@ -3,13 +3,29 @@ import I18nKey from "@i18n/i18nKey";
 import { i18n } from "@i18n/translation";
 import { getCategoryUrl } from "@utils/url-utils";
 
+/**
+ * 判断条目是否应该在博客列表中显示
+ * - post 类型：显示（排除 draft）
+ * - wiki 类型：仅 featured: true 时显示（排除 draft）
+ */
+function isVisibleInBlogList(data: CollectionEntry<"content">["data"]): boolean {
+	if (data.draft) return false;
+	if (data.kind === "post") return true;
+	if (data.kind === "wiki") return data.featured === true;
+	return false;
+}
+
 // // Retrieve posts and sort them by publication date
 async function getRawSortedPosts() {
-	const allBlogPosts = await getCollection("posts", ({ data }) => {
+	const allContent = await getCollection("content", ({ data }) => {
 		return import.meta.env.PROD ? data.draft !== true : true;
 	});
 
-	const sorted = allBlogPosts.sort((a, b) => {
+	const blogPosts = allContent.filter((entry) =>
+		isVisibleInBlogList(entry.data),
+	);
+
+	const sorted = blogPosts.sort((a, b) => {
 		// 首先按置顶状态排序，置顶文章在前
 		if (a.data.pinned && !b.data.pinned) return -1;
 		if (!a.data.pinned && b.data.pinned) return 1;
@@ -22,7 +38,7 @@ async function getRawSortedPosts() {
 	return sorted;
 }
 
-export async function getSortedPosts(): Promise<CollectionEntry<"posts">[]> {
+export async function getSortedPosts(): Promise<CollectionEntry<"content">[]> {
 	const sorted = await getRawSortedPosts();
 
 	for (let i = 1; i < sorted.length; i++) {
@@ -36,9 +52,10 @@ export async function getSortedPosts(): Promise<CollectionEntry<"posts">[]> {
 
 	return sorted;
 }
+
 export type PostForList = {
 	id: string;
-	data: CollectionEntry<"posts">["data"];
+	data: CollectionEntry<"content">["data"];
 };
 export async function getSortedPostsList(): Promise<PostForList[]> {
 	const sortedFullPosts = await getRawSortedPosts();
@@ -51,18 +68,37 @@ export async function getSortedPostsList(): Promise<PostForList[]> {
 
 	return sortedPostsList;
 }
+
+/**
+ * 获取所有内容条目（包括非精选 wiki），用于生成静态页面路径。
+ * 这样非精选 wiki 也有页面可访问（通过直接 URL 或双链），
+ * 只是不出现在博客列表里。
+ */
+export async function getAllContentEntries(): Promise<
+	CollectionEntry<"content">[]
+> {
+	return getCollection("content", ({ data }) => {
+		return import.meta.env.PROD ? data.draft !== true : true;
+	});
+}
+
 export type Tag = {
 	name: string;
 	count: number;
 };
 
 export async function getTagList(): Promise<Tag[]> {
-	const allBlogPosts = await getCollection<"posts">("posts", ({ data }) => {
+	const allContent = await getCollection<"content">("content", ({ data }) => {
 		return import.meta.env.PROD ? data.draft !== true : true;
 	});
 
+	// 只统计博客列表中可见的条目的标签
+	const visibleEntries = allContent.filter((entry) =>
+		isVisibleInBlogList(entry.data),
+	);
+
 	const countMap: { [key: string]: number } = {};
-	allBlogPosts.forEach((post: { data: { tags: string[] } }) => {
+	visibleEntries.forEach((post: { data: { tags: string[] } }) => {
 		post.data.tags.forEach((tag: string) => {
 			if (!countMap[tag]) countMap[tag] = 0;
 			countMap[tag]++;
@@ -84,11 +120,17 @@ export type Category = {
 };
 
 export async function getCategoryList(): Promise<Category[]> {
-	const allBlogPosts = await getCollection<"posts">("posts", ({ data }) => {
+	const allContent = await getCollection<"content">("content", ({ data }) => {
 		return import.meta.env.PROD ? data.draft !== true : true;
 	});
+
+	// 只统计博客列表中可见的条目的分类
+	const visibleEntries = allContent.filter((entry) =>
+		isVisibleInBlogList(entry.data),
+	);
+
 	const count: { [key: string]: number } = {};
-	allBlogPosts.forEach((post: { data: { category: string | null } }) => {
+	visibleEntries.forEach((post: { data: { category: string | null } }) => {
 		if (!post.data.category) {
 			const ucKey = i18n(I18nKey.uncategorized);
 			count[ucKey] = count[ucKey] ? count[ucKey] + 1 : 1;
@@ -157,16 +199,19 @@ function jaccardSimilarity(a: Set<string>, b: Set<string>): number {
  * - categoryBonus (0 or 10): 同分类加 10 分
  */
 export async function getRelatedPosts(
-	currentPost: CollectionEntry<"posts">,
+	currentPost: CollectionEntry<"content">,
 	maxCount = 5,
 ): Promise<PostForList[]> {
-	const allPosts = await getCollection<"posts">("posts", ({ data }) => {
+	const allContent = await getCollection<"content">("content", ({ data }) => {
 		return import.meta.env.PROD ? data.draft !== true : true;
 	});
 
-	// 排除自身和加密文章
-	const candidates = allPosts.filter(
-		(p) => p.id !== currentPost.id && !p.data.password,
+	// 候选范围：博客列表中可见的条目（排除自身和加密文章）
+	const candidates = allContent.filter(
+		(p) =>
+			p.id !== currentPost.id &&
+			!p.data.password &&
+			isVisibleInBlogList(p.data),
 	);
 
 	const currentTags = new Set(currentPost.data.tags || []);
