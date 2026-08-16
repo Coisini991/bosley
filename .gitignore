@@ -6,6 +6,8 @@ dist/
 
 # dependencies
 node_modules/
+pnpm-store/
+.pnpm-store/
 
 # logs
 npm-debug.log*
@@ -41,3 +43,5 @@ package/
 .codex*
 .claude
 .mimocode
+.workbuddy
+.obsidian

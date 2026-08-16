@@ -1,6 +1,7 @@
 export type BackgroundWallpaperConfig = {
 	mode: "banner" | "fullscreen" | "overlay" | "none"; // 壁纸模式：banner横幅模式、fullscreen全屏壁纸、overlay全屏透明覆盖模式或none纯色背景
 	playerEnable?: boolean; // 是否启用背景视频播放，默认false
+	heroVideoUrl?: string; // 主页横幅动画视频（hf_22.mp4）外链地址；放 R2 等外部存储以绕过 Cloudflare Pages 25MiB 单文件上限
 	src:
 		| string
 		| string[]

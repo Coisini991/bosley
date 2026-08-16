@@ -1,4 +1,5 @@
 import { backgroundWallpaper } from "../config";
+import type { ImageMetadata } from "astro";
 
 export type BackgroundImages = {
 	desktop: string[];
@@ -11,6 +12,42 @@ const toArray = (src: string | string[] | undefined): string[] => {
 	if (!src) return [];
 	if (Array.isArray(src)) return src;
 	return [src];
+};
+
+// 构建期自动扫描 DesktopWallpaper 目录，返回所有 jpg/png/avif 图片路径（排除视频兜底图 hf_21.jpg）
+// 使用 import.meta.glob 在构建时静态扫描，新增图片无需改配置即可加入轮播
+const DESKTOP_WALLPAPER_BASE = "assets/images/DesktopWallpaper";
+const MOBILE_WALLPAPER_BASE = "assets/images/MobileWallpaper";
+// 视频兜底图，不能进入轮播
+const EXCLUDE_FILES = new Set(["hf_21.jpg"]);
+
+const scanWallpaperDir = (base: string): string[] => {
+	const modules = import.meta.glob<ImageMetadata>(
+		"../assets/images/**/*.{png,jpg,jpeg,webp,avif}",
+		{ import: "default" },
+	);
+	const prefix = `${base}/`;
+	const matched = Object.keys(modules)
+		.map((p) => p.replace(/^.*assets\/images\//, "assets/images/"))
+		.filter((p) => p.startsWith(prefix))
+		.filter((p) => {
+			const name = p.split("/").pop() || "";
+			return !EXCLUDE_FILES.has(name);
+		})
+		.sort();
+	return matched;
+};
+
+// 背景图片处理工具函数
+// 支持 "auto" 模式：自动扫描对应目录；否则按显式配置返回
+const resolveImages = (src: string | string[] | undefined): string[] => {
+	if (src === "auto") {
+		return scanWallpaperDir(DESKTOP_WALLPAPER_BASE);
+	}
+	if (src === "auto-mobile") {
+		return scanWallpaperDir(MOBILE_WALLPAPER_BASE);
+	}
+	return toArray(src);
 };
 
 // 背景图片处理工具函数
@@ -28,8 +65,8 @@ export const getBackgroundImages = (): BackgroundImages => {
 			desktop?: string | string[];
 			mobile?: string | string[];
 		};
-		const desktopImages = toArray(srcObj.desktop);
-		const mobileImages = toArray(srcObj.mobile);
+		const desktopImages = resolveImages(srcObj.desktop as string | string[]);
+		const mobileImages = resolveImages(srcObj.mobile as string | string[]);
 		return {
 			desktop: desktopImages.length > 0 ? desktopImages : mobileImages,
 			mobile: mobileImages.length > 0 ? mobileImages : desktopImages,

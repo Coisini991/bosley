@@ -1,0 +1,146 @@
+---
+// 主页横幅动画视频
+// - banner / fullscreen 模式：仅首页播放
+// - overlay（全屏透明）模式：任意页面都播放
+// - 底层垫 hf_21.jpg 仅作「加载失败 / 减少动态」时的静态兜底，正常播放时不显示
+// - 使用原生 loop 无缝循环，不再用 rAF 做首尾渐入渐出，避免结尾闪现兜底图
+// - 尊重 prefers-reduced-motion：减少动态时不自动播放，仅显示静态兜底图
+import hf21Poster from "../../assets/images/DesktopWallpaper/hf_21.jpg";
+import { backgroundWallpaper, displaySettingsConfig } from "@/config";
+
+/**
+ * 把 Vite/Astro 的资源导入统一转成字符串 URL。
+ * dev 模式下 import 本地图片/视频可能返回对象（如 { src, width, height }），
+ * 直接 as string 会变成 "[object Object]" 导致 404。
+ */
+function resolveAssetUrl(input: unknown): string {
+	if (typeof input === "string") return input;
+	if (input && typeof input === "object") {
+		const maybeSrc = (input as Record<string, unknown>).src;
+		if (typeof maybeSrc === "string") return maybeSrc;
+		const maybeDefault = (input as Record<string, unknown>).default;
+		if (typeof maybeDefault === "string") return maybeDefault;
+	}
+	return "";
+}
+
+const videoUrl = backgroundWallpaper.heroVideoUrl || "";
+const posterUrl = resolveAssetUrl(hf21Poster);
+const baseUrl = import.meta.env.BASE_URL || "/";
+
+// 壁纸为可切换 / banner / fullscreen / overlay 时才需要渲染该层（其余模式无横幅/透明背景）
+const isWallpaperSwitchable = displaySettingsConfig.wallpaperModeSwitchable;
+const isBannerMode = backgroundWallpaper.mode === "banner";
+const isFullscreenMode = backgroundWallpaper.mode === "fullscreen";
+const isOverlayMode = backgroundWallpaper.mode === "overlay";
+const shouldRender =
+	isWallpaperSwitchable ||
+	isBannerMode ||
+	isFullscreenMode ||
+	isOverlayMode;
+---
+
+{
+	shouldRender && videoUrl && (
+		<div
+			id="home-hero-video"
+			class="absolute inset-0 z-[6] overflow-hidden pointer-events-none"
+			aria-hidden="true"
+			style="display:none;"
+		>
+			{/* 兜底图：视频加载失败 / 减少动态时才显示，正常播放中始终隐藏 */}
+			<img
+				id="home-hero-fallback"
+				src={posterUrl}
+				alt=""
+				class="absolute inset-0 size-full object-cover"
+				style="display:none;"
+			/>
+			{/* 动画视频：原生 loop 无缝循环，无渐入渐出，避免结尾闪现兜底图 */}
+			<video
+				id="home-hero-video-el"
+				class="absolute inset-0 size-full object-cover"
+				muted
+				loop
+				playsinline
+				preload="auto"
+				poster={posterUrl}
+			></video>
+		</div>
+	)
+}
+
+<script
+	is:inline
+	define:vars={{ videoUrl, posterUrl, baseUrl }}
+>
+	(() => {
+		const wrap = document.getElementById("home-hero-video");
+		const video = document.getElementById("home-hero-video-el");
+		const fallback = document.getElementById("home-hero-fallback");
+		if (!wrap || !video) return;
+
+		const reduceMotion = window.matchMedia(
+			"(prefers-reduced-motion: reduce)",
+		).matches;
+
+		// 视频加载失败 → 隐藏视频，显示静态兜底图
+		video.addEventListener("error", () => {
+			video.style.display = "none";
+			if (fallback) fallback.style.display = "";
+		});
+
+		function isHome() {
+			const base = baseUrl || "/";
+			const p = window.location.pathname;
+			const noSlash = base.endsWith("/") ? base.slice(0, -1) : base;
+			return p === base || p === noSlash || p === "/";
+		}
+
+		function start() {
+			wrap.style.display = "";
+			if (reduceMotion) {
+				// 减少动态：不加载、不播放视频，poster(hf_21.jpg) 作为静态图显示
+				video.style.display = "";
+				if (fallback) fallback.style.display = "none";
+				return;
+			}
+			if (!video.src) video.src = videoUrl;
+			const p = video.play();
+			if (p && typeof p.catch === "function") p.catch(() => {});
+		}
+
+		function stop() {
+			wrap.style.display = "none";
+			video.pause();
+		}
+
+		function sync() {
+			const mode = document.documentElement.getAttribute(
+				"data-wallpaper-mode",
+			);
+			// 全屏透明(overlay)：任意页面都播放；
+			// 横幅/全屏(banner/fullscreen)：仅首页播放
+			let visible = false;
+			if (mode === "overlay") visible = true;
+			else if (mode === "banner" || mode === "fullscreen") visible = isHome();
+			if (visible) start();
+			else stop();
+		}
+
+		// 初次加载即同步一次
+		sync();
+
+		// Swup 导航 / 壁纸模式切换时同步显示状态
+		function bindSwup() {
+			if (window.swup && window.swup.hooks) {
+				window.swup.hooks.on("page:view", sync);
+				window.swup.hooks.on("visit:start", sync);
+			} else {
+				document.addEventListener("swup:enable", bindSwup);
+			}
+		}
+		bindSwup();
+		window.addEventListener("wallpaperModeChange", sync);
+	})();
+</script>

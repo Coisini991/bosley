@@ -5,6 +5,8 @@ export const backgroundWallpaper: BackgroundWallpaperConfig = {
 	mode: "banner",
 	// 是否启用背景视频播放，配置后将在导航栏显示视频播放按钮
 	playerEnable: true,
+	// 主页横幅动画视频外链（hf_22.mp4，30MB）。放 R2 外部存储，绕过 Cloudflare Pages 25MiB 单文件限制
+	heroVideoUrl: "https://bosley.cc.cd/hf_22.mp4",
 	/**
 	 * 背景图片配置
 	 * 图片路径支持三种格式：
@@ -37,25 +39,15 @@ export const backgroundWallpaper: BackgroundWallpaperConfig = {
 	 */
 	src: {
 		// 桌面背景图片（支持单张或多张随机）
+		// 设为 "auto" 即构建期自动扫描 assets/images/DesktopWallpaper 下所有 jpg/png/avif（排除 hf_21.jpg 兜底图）
+		// 新增图片到该目录即可自动加入轮播，无需改动此处
 		// desktop: "assets/images/DesktopWallpaper/d1.avif",
-		desktop: [
-			"assets/images/DesktopWallpaper/d1.avif",
-			"assets/images/DesktopWallpaper/d2.avif",
-			"assets/images/DesktopWallpaper/d3.avif",
-			"assets/images/DesktopWallpaper/d4.avif",
-			"assets/images/DesktopWallpaper/d5.avif",
-			"assets/images/DesktopWallpaper/d6.avif",
-		],
+		desktop: "auto",
 		// 移动背景图片（支持单张或多张随机）
+		// 设为 "auto-mobile" 即构建期自动扫描 assets/images/MobileWallpaper 下所有 jpg/png/avif
+		// 新增图片到该目录即可自动加入移动端轮播，无需改动此处
 		// mobile: "assets/images/MobileWallpaper/m1.avif",
-		mobile: [
-			"assets/images/MobileWallpaper/m1.avif",
-			"assets/images/MobileWallpaper/m2.avif",
-			"assets/images/MobileWallpaper/m3.avif",
-			"assets/images/MobileWallpaper/m4.avif",
-			"assets/images/MobileWallpaper/m5.avif",
-			"assets/images/MobileWallpaper/m6.avif",
-		],
+		mobile: "auto-mobile",
 		// 背景视频播放地址
 		// 支持单个视频路径（字符串）或多个视频循环（数组，参考上面壁纸配置）
 		// 支持远程视频URL，本地视频请放在 public/assets/videos/ 目录下

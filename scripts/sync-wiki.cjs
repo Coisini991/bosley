@@ -62,35 +62,37 @@ const DRAFT_FILES = new Set(["WIKI-SCHEMA.md", "log.md"]);
 	// 2. 同步 Obsidian 库 → src/content/wiki/
 	console.log("\n2. 同步 Obsidian 库 → src/content/wiki/ ...");
 
-	// 清空 target 目录，确保和 Obsidian 库完全一致
-	if (fs.existsSync(WIKI_TARGET)) {
-		fs.rmSync(WIKI_TARGET, { recursive: true });
-	}
-	fs.mkdirSync(WIKI_TARGET, { recursive: true });
-
-	// 同步前：读取项目里现有的 featured 值，这样用户在 VSCode 里改的 featured: true 不会被覆盖
+	// 同步前（删除之前！）：读取项目里现有的 featured 值，这样用户在 VSCode 里改的 featured: true 不会被覆盖
+	// 缓存 key 使用「相对路径 + 文件名」（不带扩展名），避免不同子目录同名文件冲突
 	const featuredCache = new Map();
 	if (fs.existsSync(WIKI_TARGET)) {
-		function readExistingFeatured(dir) {
+		function readExistingFeatured(dir, relPath = "") {
 			const entries = fs.readdirSync(dir, { withFileTypes: true });
 			for (const entry of entries) {
 				const full = path.join(dir, entry.name);
+				const rel = path.join(relPath, entry.name);
 				if (entry.isDirectory()) {
-					readExistingFeatured(full);
+					readExistingFeatured(full, rel);
 					continue;
 				}
 				if (!MARKDOWN_RE.test(entry.name)) continue;
 				try {
 					const parsed = matter(fs.readFileSync(full, "utf8"));
 					if (parsed.data.featured !== undefined) {
-						const slug = entry.name.replace(MARKDOWN_RE, "");
-						featuredCache.set(slug, parsed.data.featured);
+						const cacheKey = rel.replace(MARKDOWN_RE, "");
+						featuredCache.set(cacheKey, parsed.data.featured);
 					}
 				} catch {}
 			}
 		}
 		readExistingFeatured(WIKI_TARGET);
 	}
+
+	// 读完缓存再清空 target 目录，确保和 Obsidian 库完全一致
+	if (fs.existsSync(WIKI_TARGET)) {
+		fs.rmSync(WIKI_TARGET, { recursive: true });
+	}
+	fs.mkdirSync(WIKI_TARGET, { recursive: true });
 
 	const slugMap = new Map(); // 检测 slug 冲突
 	let wikiCount = 0;
@@ -155,7 +157,8 @@ const DRAFT_FILES = new Set(["WIKI-SCHEMA.md", "log.md"]);
 
 			// featured: 优先用 Obsidian 里的值，没有则用项目里现有的值，都没有用 false
 			if (fm.featured === undefined) {
-				fm.featured = featuredCache.get(slug) ?? false;
+				const cacheKey = relFull.replace(MARKDOWN_RE, "");
+				fm.featured = featuredCache.get(cacheKey) ?? false;
 			}
 
 			// 特殊文件自动加 draft

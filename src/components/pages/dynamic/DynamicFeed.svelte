@@ -2,6 +2,7 @@
 import { onMount, tick } from "svelte";
 import ClientPagination from "@/components/common/ClientPagination.svelte";
 import { formatTimezoneOffset } from "@/utils/date-utils";
+import { fetchWithDedup } from "@/utils/fetch-dedup";
 import { fetchMemos } from "@/utils/memos-adapter";
 import { registerDynamicGallery } from "./dynamic-gallery";
 import { registerDynamicInlineComments } from "./dynamic-inline-comments";
@@ -63,6 +64,7 @@ let template: HTMLTemplateElement | null = null;
 let searchInput: HTMLInputElement | null = null;
 let yearSelect: HTMLSelectElement | null = null;
 let restoreAnchorAfterRender = false;
+let loadTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
 const pageEntries = $derived(
 	filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage),
@@ -268,9 +270,14 @@ $effect(() => {
 });
 
 onMount(() => {
-	registerDynamicGallery();
-	registerDynamicInlineComments();
-	const page = list.closest(".dynamic-page");
+	try {
+		registerDynamicGallery();
+		registerDynamicInlineComments();
+	} catch (err) {
+		console.warn("[DynamicFeed] register custom elements failed:", err);
+	}
+
+	const page = list?.closest(".dynamic-page");
 	template =
 		page?.querySelector<HTMLTemplateElement>("[data-dynamic-item-template]") ??
 		null;
@@ -283,15 +290,31 @@ onMount(() => {
 	searchInput?.addEventListener("input", filter);
 	yearSelect?.addEventListener("change", filter);
 
+	// 安全兜底：如果 8 秒内没有完成加载，强制关闭 loading 并标记失败
+	loadTimeoutId = setTimeout(() => {
+		if (loading) {
+			console.error("[DynamicFeed] load timeout, source:", source);
+			failed = true;
+			loading = false;
+		}
+	}, 8000);
+
+	const clearLoadTimeout = () => {
+		if (loadTimeoutId) {
+			clearTimeout(loadTimeoutId);
+			loadTimeoutId = null;
+		}
+	};
+
 	const load = async () => {
 		try {
+			console.log("[DynamicFeed] start loading from:", source);
 			if (memos?.enable) {
 				entries = await fetchMemos(memos.apiUrl, { parent: memos.parent });
 			} else {
-				const response = await fetch(source);
-				if (!response.ok) throw new Error(`HTTP ${response.status}`);
-				entries = (await response.json()) as DynamicData[];
+				entries = await fetchWithDedup<DynamicData[]>(source);
 			}
+			console.log("[DynamicFeed] loaded entries:", entries.length);
 			// 更新页面计数
 			const countEl = document.querySelector("[data-dynamic-page-count]");
 			if (countEl) countEl.textContent = String(entries.length);
@@ -311,15 +334,18 @@ onMount(() => {
 				}
 			}
 		} catch (error) {
-			console.error("Failed to load dynamics", error);
+			console.error("[DynamicFeed] failed to load dynamics:", error);
 			failed = true;
 		} finally {
+			clearLoadTimeout();
 			loading = false;
+			console.log("[DynamicFeed] loading state set to false");
 		}
 	};
 	void load();
 
 	return () => {
+		clearLoadTimeout();
 		searchInput?.removeEventListener("input", filter);
 		yearSelect?.removeEventListener("change", filter);
 	};
