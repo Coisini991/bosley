@@ -1,7 +1,8 @@
 ---
 title: Firefly 文章加密
 published: 1970-01-02T00:00:00.000Z
-description: 这是一篇密码保护的示例文章，用于演示文章加密功能。
+description:  >-
+ 时至今日，依然还没想好要成为什么样的大人。
 tags:
   - 示例
   - 密码保护
