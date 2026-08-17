@@ -39,7 +39,6 @@ export type {
 	CalendarConfig,
 	MobileBottomComponentConfig,
 	SidebarLayoutConfig,
-	SiteInfoConfig,
 	WidgetComponentConfig,
 	WidgetComponentType,
 	WidgetSpecificConfig,

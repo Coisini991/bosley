@@ -54,6 +54,7 @@ interface Props {
 	postCategory?: string;
 	headings?: MarkdownHeading[];
 	encrypted?: boolean;
+	hideLeftSidebar?: boolean;
 	bannerPostMeta?: {
 		title: string;
 		description?: string;
@@ -76,6 +77,7 @@ const {
 	postCategory,
 	headings = [],
 	encrypted = false,
+	hideLeftSidebar = false,
 	bannerPostMeta,
 } = Astro.props;
 
@@ -214,36 +216,40 @@ const shouldAddLeftSidebar: boolean =
 	shouldShowBothSidebarsOnPostPage && sidebarLayoutConfig.position === "right";
 
 const effectiveIsBothSidebars: boolean =
-	sidebarConfig.isBothSidebars || shouldShowBothSidebarsOnPostPage;
+	!hideLeftSidebar &&
+	(sidebarConfig.isBothSidebars || shouldShowBothSidebarsOnPostPage);
 const effectiveHasRightComponents: boolean =
 	sidebarConfig.hasRightComponents ||
 	(shouldAddRightSidebar &&
 		sidebarLayoutConfig.rightComponents.some((comp) => comp.enable));
 const effectiveHasLeftComponents: boolean =
-	sidebarConfig.hasLeftComponents ||
-	(shouldAddLeftSidebar &&
-		sidebarLayoutConfig.leftComponents.some((comp) => comp.enable));
+	!hideLeftSidebar &&
+	(sidebarConfig.hasLeftComponents ||
+		(shouldAddLeftSidebar &&
+			sidebarLayoutConfig.leftComponents.some((comp) => comp.enable)));
 
 // 使用effective值重新生成网格类
 // 当position为right且文章页临时显示左侧栏时，tabletSidebar应为right（保持显示主侧栏）
-const effectiveTabletSidebar = shouldAddLeftSidebar
+const effectiveTabletSidebar = hideLeftSidebar
 	? ("right" as const)
-	: sidebarConfig.tabletSidebar;
+	: shouldAddLeftSidebar
+		? ("right" as const)
+		: sidebarConfig.tabletSidebar;
 
 const updatedGridConfig: ResponsiveSidebarConfig = {
 	...sidebarConfig,
 	isBothSidebars: effectiveIsBothSidebars,
 	hasLeftComponents: effectiveHasLeftComponents,
 	hasRightComponents: effectiveHasRightComponents,
+	position: hideLeftSidebar ? "right" : sidebarConfig.position,
 	tabletSidebar: effectiveTabletSidebar,
 };
 
 const { gridCols } = generateGridClasses(updatedGridConfig);
 const sidebarClass = generateSidebarClasses(updatedGridConfig);
-const rightSidebarClass =
-	effectiveIsBothSidebars || sidebarLayoutConfig.position === "right"
-		? generateRightSidebarClasses(updatedGridConfig)
-		: "";
+const rightSidebarClass = effectiveHasRightComponents
+	? generateRightSidebarClasses(updatedGridConfig)
+	: "";
 const mainContentClass = generateMainContentClasses(updatedGridConfig);
 const staticBarClass = mainContentClass.replace("transition-main", "").trim();
 
@@ -843,7 +849,7 @@ const hasMultipleImages =
           class={`transition duration-700 w-full left-0 right-0 grid ${gridCols} grid-rows-[auto_1fr_auto] lg:grid-rows-[auto] mx-auto gap-4 px-2 md:px-4 ${!sidebarConfig.mobileShowSidebar ? 'mobile-no-sidebar' : ''}`}
           data-sidebar-enable={sidebarLayoutConfig.enable ? "true" : "false"}
           data-grid-hide-sidebar-on-post={hideSidebarOnPostPage ? "true" : "false"}
-          data-sidebar-position={sidebarLayoutConfig.position}
+		  data-sidebar-position={updatedGridConfig.position}
           data-tablet-sidebar={sidebarLayoutConfig.tabletSidebar ?? "left"}
           data-show-both-sidebars-on-post={sidebarLayoutConfig.showBothSidebarsOnPostPage ? "true" : "false"}
         >
@@ -891,7 +897,7 @@ const hasMultipleImages =
                     data-current-post-category={postCategory || ""}
                 >
                 {/* 携带网格布局类名，用于JS更新父容器 */}
-                <div id="grid-class-carrier" data-grid-class={gridCols} class="hidden"></div>
+				<div id="grid-class-carrier" data-grid-class={gridCols} data-hide-left-sidebar={hideLeftSidebar ? "true" : "false"} class="hidden"></div>
                 {/* 为每个页面提供一个隐藏的h1标题，用于SEO和可访问性 */}
                 <h1 class="sr-only">{title}</h1>
                 <div id="content-wrapper" class="onload-animation transition-leaving">
@@ -911,7 +917,7 @@ const hasMultipleImages =
                 <>
                     {sidebarLayoutConfig.enable ? (
                         <div id="right-sidebar-static" class="contents" data-hide-sidebar-on-post={hideSidebarOnPostPage ? "true" : "false"}>
-                            {(effectiveIsBothSidebars || sidebarLayoutConfig.position === "right") && effectiveHasRightComponents && (
+							{effectiveHasRightComponents && (
 								<SideBar side="right" class={rightSidebarClass} headings={headings} encrypted={encrypted}></SideBar>
                             )}
                         </div>

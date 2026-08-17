@@ -38,7 +38,7 @@ const coverLqipProps = cover
 	: { style: "" };
 ---
 
-<MainGridLayout title={albumMeta.name} description={albumMeta.description || ""}>
+<MainGridLayout title={albumMeta.name} description={albumMeta.description || ""} hideLeftSidebar>
   <!-- 相册封面横幅 -->
   <div class="w-full rounded-(--radius-large) overflow-hidden relative">
     {cover ? (

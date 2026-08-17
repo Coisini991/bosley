@@ -352,20 +352,6 @@ export const ko: Translation = {
 	[Key.siteStatsDays]: "{days}일",
 	[Key.today]: "오늘",
 
-	// Site Info
-	[Key.siteInfo]: "사이트 정보",
-	[Key.siteInfoBuildTime]: "빌드 시각",
-	[Key.siteInfoBuildPlatform]: "빌드 플랫폼",
-	[Key.siteInfoBlogVersion]: "블로그 버전",
-	[Key.siteInfoAstroVersion]: "Astro 버전",
-	[Key.siteInfoNodeVersion]: "Node 버전",
-	[Key.siteInfoPnpmVersion]: "pnpm 버전",
-	[Key.siteInfoSystem]: "시스템",
-	[Key.siteInfoExpand]: "빌드 정보 표시",
-	[Key.siteInfoCollapse]: "빌드 정보 숨기기",
-	[Key.siteInfoDomain]: "도메인",
-	[Key.siteInfoLicense]: "라이선스",
-
 	// Calendar Component
 	[Key.calendarSunday]: "일",
 	[Key.calendarMonday]: "월",

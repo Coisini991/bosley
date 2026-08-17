@@ -1573,10 +1573,18 @@ function disableAnimation() {
 
     const sidebarEnabled = mainGrid.getAttribute("data-sidebar-enable") !== "false";
     const sidebarHideOnPost = mainGrid.getAttribute("data-grid-hide-sidebar-on-post") === "true";
+    const hideLeftSidebar = document.getElementById("grid-class-carrier")?.getAttribute("data-hide-left-sidebar") === "true";
     const isPostPage = isCurrentPagePost();
-    const sidebarPosition = mainGrid.getAttribute("data-sidebar-position") || "left";
+    const sidebarPosition = hideLeftSidebar ? "right" : (mainGrid.getAttribute("data-sidebar-position") || "left");
     const tabletSidebar = mainGrid.getAttribute("data-tablet-sidebar") || "left";
     const showBothSidebarsOnPostPage = mainGrid.getAttribute("data-show-both-sidebars-on-post") === "true";
+    const leftSidebarWrapper = document.getElementById("left-sidebar-wrapper");
+
+    if (hideLeftSidebar) {
+      leftSidebarWrapper?.style.setProperty("display", "none", "important");
+    } else {
+      leftSidebarWrapper?.style.removeProperty("display");
+    }
 
     // 侧边栏禁用 或 文章详情页隐藏侧边栏时，保持单列布局
     if (!sidebarEnabled || (isPostPage && sidebarHideOnPost)) {

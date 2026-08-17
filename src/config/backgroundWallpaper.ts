@@ -6,7 +6,7 @@ export const backgroundWallpaper: BackgroundWallpaperConfig = {
 	// 是否启用背景视频播放，配置后将在导航栏显示视频播放按钮
 	playerEnable: true,
 	// 主页横幅动画视频外链（hf_22.mp4，30MB）。放 R2 外部存储，绕过 Cloudflare Pages 25MiB 单文件限制
-	heroVideoUrl: "https://bosley.cc.cd/hf_22.mp4",
+	heroVideoUrl: "https://cdn.bosley.cc.cd/hf_22.mp4",
 	/**
 	 * 背景图片配置
 	 * 图片路径支持三种格式：
